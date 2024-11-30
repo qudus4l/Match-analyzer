@@ -14,10 +14,29 @@ class MatchAnalyzer:
         self.base_url = 'http://api.football-data.org/v4'
         self.headers = {'X-Auth-Token': self.api_key}
         
-        # Initialize empty team_ids dictionary
-        self.team_ids = {}
-        # Populate team IDs from Premier League
-        self.populate_team_ids()
+        # Initialize with comprehensive Premier League team mappings
+        self.team_ids = {
+            'arsenal': 57, 'arsenal fc': 57,
+            'aston villa': 58, 'aston villa fc': 58,
+            'chelsea': 61, 'chelsea fc': 61,
+            'everton': 62, 'everton fc': 62,
+            'fulham': 63, 'fulham fc': 63,
+            'liverpool': 64, 'liverpool fc': 64,
+            'manchester city': 65, 'man city': 65, 'city': 65,
+            'manchester united': 66, 'man united': 66, 'man utd': 66,
+            'newcastle': 67, 'newcastle united': 67,
+            'tottenham': 73, 'spurs': 73, 'tottenham hotspur': 73,
+            'wolves': 76, 'wolverhampton': 76, 'wolverhampton wanderers': 76,
+            'leicester': 338, 'leicester city': 338,
+            'southampton': 340, 'saints': 340,
+            'ipswich': 349, 'ipswich town': 349,
+            'nottingham': 351, 'forest': 351, 'nottingham forest': 351,
+            'crystal palace': 354, 'palace': 354,
+            'brighton': 397, 'brighton hove': 397, 'brighton & hove': 397,
+            'brentford': 402,
+            'west ham': 563, 'west ham united': 563,
+            'bournemouth': 1044, 'afc bournemouth': 1044
+        }
 
     def populate_team_ids(self):
         """Fetch and store Premier League team IDs from the API"""
@@ -50,12 +69,19 @@ class MatchAnalyzer:
             }
 
     def get_team_id(self, team_name):
-        """Get team ID from the predefined mapping or search using API"""
+        """Get team ID with fuzzy matching fallback"""
         team_name_lower = team_name.lower()
+        
+        # Direct match
         if team_name_lower in self.team_ids:
             return self.team_ids[team_name_lower]
             
-        # Fallback to API search if team not in mapping
+        # Partial match
+        for known_name, team_id in self.team_ids.items():
+            if team_name_lower in known_name or known_name in team_name_lower:
+                return team_id
+                
+        # Fallback to API search if still no match
         url = f"{self.base_url}/teams"
         response = requests.get(url, headers=self.headers)
         
