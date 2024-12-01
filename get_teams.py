@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def fetch_upcoming_matches(competition_id, api_key):
     # API endpoint and headers
@@ -8,33 +8,70 @@ def fetch_upcoming_matches(competition_id, api_key):
         "X-Auth-Token": api_key
     }
     
-    # Today's date and a date range for the future
-    today = datetime.today().strftime('%Y-%m-%d')
-    future_date = (datetime.today().replace(year=datetime.today().year + 1)).strftime('%Y-%m-%d')
+    # Date range: Today to 30 days in the future (more reasonable window)
+    today = datetime.today()
+    future_date = today + timedelta(days=30)
     
     # Query parameters
     params = {
-        "dateFrom": today,
-        "dateTo": future_date
+        "dateFrom": today.strftime('%Y-%m-%d'),
+        "dateTo": future_date.strftime('%Y-%m-%d'),
+        "status": "SCHEDULED"  # Only get scheduled matches
     }
+    
+    print(f"\nQuerying matches from {params['dateFrom']} to {params['dateTo']}")
     
     try:
         # API request
         response = requests.get(base_url, headers=headers, params=params)
-        response.raise_for_status()  # Raise an error for bad status codes
+        
+        # Handle common API errors
+        if response.status_code == 403:
+            print("\nAPI Error: Authentication failed. Please check your API key.")
+            print("Note: Some competitions might require a premium subscription.")
+            return []
+        elif response.status_code == 429:
+            print("\nAPI Error: Rate limit exceeded. Please try again later.")
+            return []
+        
+        response.raise_for_status()  # Raise an error for other status codes
         
         # Process matches
         data = response.json()
+        
+        # Debug API response
+        if 'error' in data:
+            error_msg = data.get('message', data['error'])
+            print(f"\nAPI Error: {error_msg}")
+            if 'subscription' in error_msg.lower():
+                print("Note: This competition might require a premium subscription.")
+            return []
+            
         matches = data.get("matches", [])
+        competition_name = data.get("competition", {}).get("name", "Unknown")
+        
+        print(f"\nAPI Response Summary:")
+        print(f"Competition: {competition_name}")
+        print(f"Total matches found: {len(matches)}")
+        print(f"Date range: {params['dateFrom']} to {params['dateTo']}")
         
         if not matches:
-            print("No upcoming matches found.")
+            print("No upcoming matches found in this date range.")
             return []
             
         return matches
     
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
+        print(f"\nAPI Request Error: {str(e)}")
+        if "Max retries exceeded" in str(e):
+            print("Note: Please check your internet connection.")
+        return []
+    except ValueError as e:
+        print(f"\nJSON Parsing Error: {str(e)}")
+        print("Note: The API response was not in the expected format.")
+        return []
+    except Exception as e:
+        print(f"\nUnexpected Error: {str(e)}")
         return []
 
 # Example usage (only if run directly)
