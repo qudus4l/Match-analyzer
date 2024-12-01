@@ -241,7 +241,7 @@ Example format:
         try:
             # Get ChatGPT's response
             response = self.client.chat.completions.create(
-                model="gpt-4-1106-preview",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a football prediction expert. Provide exactly 3 bullet-point predictions. No explanations or analysis."},
                     {"role": "user", "content": prompt}
